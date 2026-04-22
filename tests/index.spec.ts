@@ -30,7 +30,8 @@ describe('MimeTypes', () => {
       },
     )
 
-    it.each([[undefined], [null], [123], ['']])('should handle invalid input %s', (input: unknown) => {
+    it.each([[undefined], [null], [123], ['']])('should handle invalid input %s', input => {
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- testing invalid runtime inputs
       expect(lookup(input as string)).toBe(false)
     })
   })
@@ -56,7 +57,8 @@ describe('MimeTypes', () => {
       expect(contentType(type)).toBe(false)
     })
 
-    it.each([[undefined], [null], [123], ['']])('should handle invalid input %s', (input: unknown) => {
+    it.each([[undefined], [null], [123], ['']])('should handle invalid input %s', input => {
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- testing invalid runtime inputs
       expect(contentType(input as string)).toBe(false)
     })
   })
@@ -77,7 +79,8 @@ describe('MimeTypes', () => {
       expect(extension(mime)).toBe(false)
     })
 
-    it.each([[undefined], [null], [123], ['']])('should handle invalid input %s', (input: unknown) => {
+    it.each([[undefined], [null], [123], ['']])('should handle invalid input %s', input => {
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- testing invalid runtime inputs
       expect(extension(input as string)).toBe(false)
     })
   })
@@ -102,7 +105,8 @@ describe('MimeTypes', () => {
       },
     )
 
-    it.each([[undefined], [null], [123], ['']])('should handle invalid input %s', (input: unknown) => {
+    it.each([[undefined], [null], [123], ['']])('should handle invalid input %s', input => {
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- testing invalid runtime inputs
       expect(charset(input as string)).toBe(false)
     })
   })
