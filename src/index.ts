@@ -16,6 +16,12 @@ const TEXT_TYPE_REGEXP = /^text\//i
 const mimeTypes: Partial<Record<Extension, MimeType>> = {} // extension -> mime type
 const mimeExtensions: Partial<Record<MimeType, readonly Extension[]>> = {} // mime type -> extensions
 
+// --- Type Guards ---
+
+const isMimeType = (key: string): key is MimeType => key in db
+
+const isExtension = (key: string): key is Extension => key.length > 0
+
 // --- Initialization ---
 
 /**
@@ -31,15 +37,19 @@ const populateMaps = (
   const preference: (Source | undefined)[] = ['nginx', 'apache', undefined, 'iana']
 
   // Iterate over the specific MimeType keys
-  ;(Object.keys(database) as MimeType[]).forEach(type => {
+  for (const key of Object.keys(database)) {
+    if (!isMimeType(key)) {
+      continue
+    }
+    const type = key
     const mime = database[type]
     // Check if mime entry has extensions property
     if (!('extensions' in mime)) {
-      return
+      continue
     }
     // Check if extensions array is not empty
     if (mime.extensions.length <= 0) {
-      return
+      continue
     }
     // Now TypeScript knows mime.extensions is ReadonlyArray<Extension>
     const exts = mime.extensions
@@ -70,7 +80,7 @@ const populateMaps = (
       // Set the extension -> mime type mapping
       typesMap[extension] = type
     }
-  })
+  }
 }
 
 // Populate the maps upon module initialization
@@ -94,16 +104,13 @@ export const lookup = (path: string): MimeType | false => {
   const lastDotIndex = filename.lastIndexOf('.')
   const potentialExtension = lastDotIndex < 1 ? '' : filename.substring(lastDotIndex + 1).toLowerCase()
 
-  // Check for empty string before casting to Extension type
-  if (!potentialExtension) {
+  // Check for empty string or invalid extension
+  if (!potentialExtension || !isExtension(potentialExtension)) {
     return false
   }
 
-  // Safe to cast now - we've verified it's non-empty
-  const extension = potentialExtension as Extension
-
   // Return the specific MimeType or false
-  return mimeTypes[extension] ?? false
+  return mimeTypes[potentialExtension] ?? false
 }
 
 /**
@@ -124,8 +131,8 @@ export const charset = (type: string): Charset | 'UTF-8' | false => {
     return false
   }
 
-  // Check if it's a valid key in our db before casting
-  if (!(mimeKey in db)) {
+  // Check if it's a valid key in our db
+  if (!isMimeType(mimeKey)) {
     // Not a known MIME type, check if it's a text type
     if (TEXT_TYPE_REGEXP.test(mimeKey)) {
       return 'UTF-8'
@@ -133,7 +140,7 @@ export const charset = (type: string): Charset | 'UTF-8' | false => {
     return false
   }
 
-  const mimeData = db[mimeKey as MimeType]
+  const mimeData = db[mimeKey]
 
   if ('charset' in mimeData) {
     return mimeData.charset
@@ -191,15 +198,14 @@ export const extension = (type: string): Extension | false => {
   }
 
   const match = EXTRACT_TYPE_REGEXP.exec(type)
-  // Ensure the matched type is treated as a potential MimeType key
-  const mime = match?.[1]?.toLowerCase() as MimeType | undefined
+  const mimeKey = match?.[1]?.toLowerCase()
 
-  if (!mime) {
+  if (!mimeKey || !isMimeType(mimeKey)) {
     return false
   }
 
   // Use the specific MimeType key for lookup
-  const exts = mimeExtensions[mime] // exts is ReadonlyArray<Extension> | undefined
+  const exts = mimeExtensions[mimeKey] // exts is ReadonlyArray<Extension> | undefined
 
   if (exts && exts.length > 0) {
     // Inside this block, TS knows exts is defined and has elements

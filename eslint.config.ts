@@ -1,3 +1,3 @@
 import { nodePreset } from '@ai-swfactory/panoptic-presets/eslint'
 
-export default nodePreset({})
+export default nodePreset()

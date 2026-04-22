@@ -1,0 +1,72 @@
+name: CI/Release
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force:
+        type: boolean
+        description: 'Bypass guard findings (findings are logged but do not block)'
+        default: false
+      exclude-validators:
+        type: string
+        description: 'Comma-separated validator IDs to skip'
+        default: ''
+      exclude-stages:
+        type: string
+        description: 'Comma-separated stages to skip'
+        default: ''
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Configure npm auth
+        # Written to the user-level config (~/.npmrc) so it never appears in
+        # the project working tree — keeps the PAT out of any follow-up
+        # commits guard might make during release.
+        run: |
+          echo "@ai-swfactory:registry=https://npm.pkg.github.com" >> "$HOME/.npmrc"
+          echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" >> "$HOME/.npmrc"
+        env:
+          NPM_TOKEN: ${{ secrets.AI_SWFACTORY_PACKAGES_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          NPM_TOKEN: ${{ secrets.AI_SWFACTORY_PACKAGES_TOKEN }}
+
+      - name: Run panoptic-guard
+        env:
+          NPM_TOKEN: ${{ secrets.AI_SWFACTORY_PACKAGES_TOKEN }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            command="validate"
+          else
+            command="release"
+          fi
+          pnpm exec panoptic-guard "$command" \
+            --github-token=${{ secrets.AI_SWFACTORY_PACKAGES_TOKEN }} \
+            --npm-token=${{ github.token }} \
+            --force=${{ inputs.force }} \
+            --exclude-validators=${{ inputs.exclude-validators }} \
+            --exclude-stages=${{ inputs.exclude-stages }}

@@ -43,3 +43,5 @@ Thumbs.db
 
 # GitHub Actions checkout (created during CI)
 .github/ai-swfactory-actions/
+!.env.example
+CHANGELOG.md
