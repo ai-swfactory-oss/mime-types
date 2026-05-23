@@ -1,0 +1,5 @@
+#!/bin/sh
+# DO NOT EDIT — generated from src/blueprints/pre-push.ts; run `panoptic-guard commit` to refresh
+
+panoptic-guard verify-receipt --sha "$(git rev-parse HEAD)" --require-clean-tree --format text --__hook-context "$*" || exit 1
+panoptic-guard pre-push --__hook-context "$*"
