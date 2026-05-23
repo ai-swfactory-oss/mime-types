@@ -11,9 +11,6 @@ importers:
       '@ai-swfactory/bash-test-kit':
         specifier: '>=1.0.0'
         version: 1.1.2(@ai-swfactory/panoptic-presets@16.3.0(eslint@10.2.1(jiti@2.6.1))(jest@29.7.0(@types/node@24.12.4))(prettier@3.7.4)(typescript@5.9.3)(vite@7.3.1(@types/node@24.12.4)(jiti@2.6.1))(vitest@3.2.4(@types/node@24.12.4)(jiti@2.6.1)))(@ai-swfactory/panoptic-release@3.1.1)(@ai-swfactory/rollup-plugins@3.4.7(esbuild@0.27.2)(typescript@5.9.3))(eslint@10.2.1(jiti@2.6.1))(jiti@2.6.1)(prettier@3.7.4)(typescript-eslint@8.59.0(eslint@10.2.1(jiti@2.6.1))(typescript@5.9.3))(typescript@5.9.3)(vitest@3.2.4(@types/node@24.12.4)(jiti@2.6.1))
-      '@ai-swfactory/panoptic-guard':
-        specifier: ^12.0.2
-        version: 12.0.2(@ai-swfactory/panoptic-presets@16.3.0(eslint@10.2.1(jiti@2.6.1))(jest@29.7.0(@types/node@24.12.4))(prettier@3.7.4)(typescript@5.9.3)(vite@7.3.1(@types/node@24.12.4)(jiti@2.6.1))(vitest@3.2.4(@types/node@24.12.4)(jiti@2.6.1)))(@ai-swfactory/panoptic-release@3.1.1)(@ai-swfactory/rollup-plugins@3.4.7(esbuild@0.27.2)(typescript@5.9.3))(eslint@10.2.1(jiti@2.6.1))(jiti@2.6.1)(prettier@3.7.4)(typescript-eslint@8.59.0(eslint@10.2.1(jiti@2.6.1))(typescript@5.9.3))(typescript@5.9.3)(vitest@3.2.4(@types/node@24.12.4)(jiti@2.6.1))
       '@ai-swfactory/panoptic-presets':
         specifier: ^16.1.1
         version: 16.3.0(eslint@10.2.1(jiti@2.6.1))(jest@29.7.0(@types/node@24.12.4))(prettier@3.7.4)(typescript@5.9.3)(vite@7.3.1(@types/node@24.12.4)(jiti@2.6.1))(vitest@3.2.4(@types/node@24.12.4)(jiti@2.6.1))
@@ -62,38 +59,6 @@ packages:
   '@ai-swfactory/branded-types@2.2.0':
     resolution: {integrity: sha512-cuQu9CfbTBepPrtQpC5puT2cHfOuUns9zctrWbC9lS6WVF3awl57yggQ1XeyQivo9VOA1AO/yyhrhWah5c7Qzg==, tarball: https://npm.pkg.github.com/download/@ai-swfactory/branded-types/2.2.0/774da59f9f2b4d4c3df054fe16d468a78a36d4a3}
     engines: {node: '>=20.0.0'}
-
-  '@ai-swfactory/panoptic-guard@12.0.2':
-    resolution: {integrity: sha512-akDep/T+qUyJTkKx4Hq0jHnRazd8vhZ031wgNfWlklnCiX0yokdB+LbU2cGsP1tO4FIq54KXcI2uuBnGM5nOTQ==, tarball: https://npm.pkg.github.com/download/@ai-swfactory/panoptic-guard/12.0.2/5a400c728aa97996d68bdf3b6821f14b928894d2}
-    engines: {node: '>=20.0.0'}
-    hasBin: true
-    peerDependencies:
-      '@ai-swfactory/panoptic-presets': '>=12.0.0'
-      '@ai-swfactory/panoptic-release': '>=1.0.0'
-      '@ai-swfactory/rollup-plugins': '>=3.0.0'
-      eslint: '>=10.0.0'
-      jiti: '>=2.0.0'
-      prettier: '>=3.0.0'
-      typescript: '>=5.0.0'
-      typescript-eslint: '>=8.0.0'
-      vitest: '>=3.0.0'
-    peerDependenciesMeta:
-      '@ai-swfactory/panoptic-presets':
-        optional: true
-      '@ai-swfactory/panoptic-release':
-        optional: true
-      '@ai-swfactory/rollup-plugins':
-        optional: true
-      eslint:
-        optional: true
-      jiti:
-        optional: true
-      prettier:
-        optional: true
-      typescript-eslint:
-        optional: true
-      vitest:
-        optional: true
 
   '@ai-swfactory/panoptic-guard@5.10.1':
     resolution: {integrity: sha512-eDFlbfLe1WR1FD0b9RgxqhDUWybgVPwCq4sBa/wSFwB8TooEEgFyMVuDFfklYAo6244yOT7aQOcRyps4QSLyag==, tarball: https://npm.pkg.github.com/download/@ai-swfactory/panoptic-guard/5.10.1/bffb79666c15dd9d38c136cf47f9a7bf573f56ec}
@@ -3080,25 +3045,6 @@ snapshots:
   '@ai-swfactory/branded-types@2.2.0':
     dependencies:
       zod: 3.25.76
-
-  '@ai-swfactory/panoptic-guard@12.0.2(@ai-swfactory/panoptic-presets@16.3.0(eslint@10.2.1(jiti@2.6.1))(jest@29.7.0(@types/node@24.12.4))(prettier@3.7.4)(typescript@5.9.3)(vite@7.3.1(@types/node@24.12.4)(jiti@2.6.1))(vitest@3.2.4(@types/node@24.12.4)(jiti@2.6.1)))(@ai-swfactory/panoptic-release@3.1.1)(@ai-swfactory/rollup-plugins@3.4.7(esbuild@0.27.2)(typescript@5.9.3))(eslint@10.2.1(jiti@2.6.1))(jiti@2.6.1)(prettier@3.7.4)(typescript-eslint@8.59.0(eslint@10.2.1(jiti@2.6.1))(typescript@5.9.3))(typescript@5.9.3)(vitest@3.2.4(@types/node@24.12.4)(jiti@2.6.1))':
-    dependencies:
-      '@ai-swfactory/branded-types': 2.2.0
-      '@ai-swfactory/panoptic-templates': 2.1.0
-      '@ai-swfactory/seams': 6.1.0
-      '@ai-swfactory/seams-node': 5.1.0(@ai-swfactory/seams@6.1.0)
-      picomatch: 4.0.3
-      typescript: 5.9.3
-      zod: 4.3.6
-    optionalDependencies:
-      '@ai-swfactory/panoptic-presets': 16.3.0(eslint@10.2.1(jiti@2.6.1))(jest@29.7.0(@types/node@24.12.4))(prettier@3.7.4)(typescript@5.9.3)(vite@7.3.1(@types/node@24.12.4)(jiti@2.6.1))(vitest@3.2.4(@types/node@24.12.4)(jiti@2.6.1))
-      '@ai-swfactory/panoptic-release': 3.1.1
-      '@ai-swfactory/rollup-plugins': 3.4.7(esbuild@0.27.2)(typescript@5.9.3)
-      eslint: 10.2.1(jiti@2.6.1)
-      jiti: 2.6.1
-      prettier: 3.7.4
-      typescript-eslint: 8.59.0(eslint@10.2.1(jiti@2.6.1))(typescript@5.9.3)
-      vitest: 3.2.4(@types/node@24.12.4)(jiti@2.6.1)
 
   '@ai-swfactory/panoptic-guard@5.10.1(@ai-swfactory/panoptic-presets@16.3.0(eslint@10.2.1(jiti@2.6.1))(jest@29.7.0(@types/node@24.12.4))(prettier@3.7.4)(typescript@5.9.3)(vite@7.3.1(@types/node@24.12.4)(jiti@2.6.1))(vitest@3.2.4(@types/node@24.12.4)(jiti@2.6.1)))(@ai-swfactory/panoptic-release@3.1.1)(@ai-swfactory/rollup-plugins@3.4.7(esbuild@0.27.2)(typescript@5.9.3))(eslint@10.2.1(jiti@2.6.1))(jiti@2.6.1)(prettier@3.7.4)(typescript-eslint@8.59.0(eslint@10.2.1(jiti@2.6.1))(typescript@5.9.3))(typescript@5.9.3)(vitest@3.2.4(@types/node@24.12.4)(jiti@2.6.1))':
     dependencies:

@@ -1,0 +1,17 @@
+{
+  "files.readonlyInclude": {
+    ".gitattributes": true,
+    ".github/workflows/guard-presence-check.yml": true,
+    ".github/workflows/guard-publish.yml": true,
+    ".gitignore": true,
+    ".hooks/post-commit": true,
+    ".hooks/pre-commit": true,
+    ".hooks/pre-push": true,
+    ".prettierignore": true,
+    ".prettierrc": true,
+    ".vscode/settings.json": true,
+    "eslint.config.ts": true,
+    "tsconfig.json": true,
+    "vitest.config.ts": true
+  }
+}

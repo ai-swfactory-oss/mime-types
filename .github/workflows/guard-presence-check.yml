@@ -1,0 +1,225 @@
+# DO NOT EDIT — generated from src/blueprints/guard-presence-check.ts; run `panoptic-guard commit` to refresh
+name: Guard presence check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+jobs:
+  presence-check:
+    runs-on: ubuntu-latest
+    # CI verifies receipts; it does not produce them. Local-first contract:
+    # the developer signs the receipt locally via `panoptic-guard commit`
+    # (or `panoptic-guard release` for release pushes) and pushes the
+    # validation note alongside the commit. This workflow's only job is to
+    # confirm the note is present, structurally valid, and complete.
+    #
+    # Sub-minute budget — only git + node operations, both pre-installed
+    # on ubuntu-latest. Any timeout in this window indicates a network
+    # issue, not a missing receipt; absent receipts fail fast on the
+    # presence check itself.
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      # Check out the PR's head sha (not the synthetic merge commit
+      # actions/checkout uses by default for pull_request events). The
+      # validation receipt is attached to the head sha — that is what the
+      # developer signed locally and pushed via refs/notes/validation.
+      # Defaulting to `github.sha` keeps push events on the
+      # commit-being-verified.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      # Internal-strict guard.json opt-out policy (issue #225 Stryker
+      # opt-out + issue #506 blueprint-owned-file opt-out).
+      #
+      # The `guard.json` opt-outs (`validators.stryker.enabled: false`
+      # and `blueprints.<id>.ownedFiles`) are EXTERNAL-consumer ramps.
+      # They MUST NOT appear in the @ai-swfactory internal repos
+      # (panoptic-guard, claude-factory, seams) — those hold 100%
+      # mutation coverage and zero sanctioned blueprint divergence as
+      # permanent project invariants.
+      #
+      # ASYMMETRIC by design: this workflow is rendered into EVERY
+      # consumer repo from the shared blueprint, so the gate is
+      # self-host-scoped — it only enforces when the repo's
+      # `package.json` "name" is in the `@ai-swfactory/` scope.
+      # External consumers get the step but it is a no-op for them
+      # (their opt-out is legitimate). Zero-install (git+node only) to
+      # stay inside the sub-minute presence-check budget.
+      - name: Internal-strict guard.json opt-out policy
+        run: |
+          if [ ! -f package.json ]; then
+            echo "no package.json — internal-strict policy not applicable"
+            exit 0
+          fi
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            const name = (pkg && pkg.name) || '';
+            if (!name.startsWith('@ai-swfactory/')) {
+              console.log('not an @ai-swfactory repo (' + (name || '<unnamed>') + ') — opt-out is a legitimate external-consumer ramp; policy not applicable');
+              process.exit(0);
+            }
+            if (!fs.existsSync('guard.json')) {
+              console.log('@ai-swfactory repo with no guard.json — internal-strict policy satisfied');
+              process.exit(0);
+            }
+            let cfg;
+            try { cfg = JSON.parse(fs.readFileSync('guard.json', 'utf8')); }
+            catch (e) { console.error('::error::guard.json is present but not valid JSON: ' + e.message); process.exit(1); }
+            const stacks = (cfg && cfg.stacks) || {};
+            const strykerOffenders = Object.entries(stacks)
+              .filter(([, s]) => s && s.validators && s.validators.stryker && s.validators.stryker.enabled === false)
+              .map(([id]) => id);
+            const ownedFileOffenders = Object.entries(stacks).flatMap(([id, s]) => {
+              const bps = (s && s.blueprints) || {};
+              return Object.entries(bps)
+                .filter(([, b]) => b && Array.isArray(b.ownedFiles) && b.ownedFiles.length > 0)
+                .map(([bpId]) => id + '.' + bpId);
+            });
+            if (strykerOffenders.length > 0) {
+              console.error('::error::Internal-strict policy violation: guard.json opts out of stryker for stack(s): ' + strykerOffenders.join(', '));
+            }
+            if (ownedFileOffenders.length > 0) {
+              console.error('::error::Internal-strict policy violation: guard.json declares a blueprint-owned-file opt-out (issue #506) for: ' + ownedFileOffenders.join(', '));
+            }
+            if (strykerOffenders.length > 0 || ownedFileOffenders.length > 0) {
+              console.error('::error::Internal @ai-swfactory projects (panoptic-guard, claude-factory, seams) MUST NOT use these opt-outs — they are external-consumer ramps only.');
+              process.exit(1);
+            }
+            console.log('@ai-swfactory repo: guard.json present but declares no forbidden opt-out — internal-strict policy satisfied');
+          "
+
+      # Receipt presence check. Reads the validation note for HEAD; parses
+      # the JSON receipt; verifies status=pass AND that every expected
+      # validator is present. Any failure mode (missing note, parse error,
+      # incomplete validator set, empty expectedValidators list, status !=
+      # pass) fails the workflow with an actionable error directing to
+      # `panoptic-guard commit`.
+      #
+      # The empty-expectedValidators rejection is a trust-boundary check:
+      # the receipt schema permits `expectedValidators: []` (legitimate
+      # local-tree-only signal for stacks with zero `committed:*`
+      # validators — see runPostCommit), but CI must reject it because
+      # a guard-managed project always has at least one validator and an
+      # empty list would otherwise satisfy the length-equality check
+      # vacuously.
+      # Issue #281 — content-keyed tree-hash fallback for squash-merge.
+      #
+      # Phase 7.j (#273) made the RECEIPT content-keyed (a stable
+      # `treeHash` field on every receipt). #277 shipped this presence
+      # check with a pure SHA-keyed LOOKUP (`git notes show HEAD`),
+      # which fails after every squash-merge to main: the merge SHA is
+      # different from the PR head SHA, so the note is not attached
+      # even though the merged tree is byte-identical.
+      #
+      # The fallback closes the gap. The direct lookup runs first
+      # (O(1) for the common case: PR push, fast-forward merge, push
+      # to main with SHA preserved). On miss, we capture
+      # `HEAD^{tree}` and walk every annotated SHA under
+      # `refs/notes/validation` (`git notes list` prints
+      # `<note-sha> <annotated-sha>` pairs), parse each note as a
+      # receipt, and accept the first whose `treeHash` field equals
+      # `HEAD^{tree}`. Bounded scan — the notes ref carries at most
+      # O(commits-per-PR) entries on a typical repo.
+      - name: Verify receipt presence
+        run: |
+          git fetch origin '+refs/notes/validation:refs/notes/validation' 2>/dev/null || true
+          NOTE=$(git notes --ref=validation show HEAD 2>/dev/null || echo '')
+          if [ -z "$NOTE" ]; then
+            # Tree-hash fallback (issue #281). Capture HEAD's tree
+            # then walk every note on refs/notes/validation looking
+            # for a receipt whose treeHash matches. The squash-merge
+            # case: merge commit's tree equals PR head's tree, so the
+            # PR-head receipt is reusable for the merge SHA.
+            HEAD_TREE=$(git rev-parse HEAD^{tree} 2>/dev/null || echo '')
+            if [ -n "$HEAD_TREE" ]; then
+              # `git notes list` prints one line per note as
+              # `<note-blob-sha> <annotated-commit-sha>`. We pipe
+              # the listing into a while-loop, read each note via
+              # `git notes show <sha>`, parse the receipt JSON, and
+              # accept the first whose treeHash matches HEAD's tree.
+              # A pipe (rather than a heredoc) avoids YAML-block
+              # indentation problems — the terminator-at-column-0
+              # constraint of bash heredocs would be brittle inside
+              # a YAML `run: |` scalar.
+              NOTE=$(git notes --ref=validation list 2>/dev/null | while read -r _NOTE_SHA ANNOTATED_SHA; do
+                [ -z "$ANNOTATED_SHA" ] && continue
+                CANDIDATE=$(git notes --ref=validation show "$ANNOTATED_SHA" 2>/dev/null || echo '')
+                [ -z "$CANDIDATE" ] && continue
+                CANDIDATE_TREE=$(echo "$CANDIDATE" | node -e "const d=require('fs').readFileSync(0,'utf8'); try { const r=JSON.parse(d); console.log(r.treeHash||''); } catch { console.log(''); }")
+                if [ "$CANDIDATE_TREE" = "$HEAD_TREE" ]; then
+                  printf '%s' "$CANDIDATE"
+                  break
+                fi
+              done)
+              if [ -n "$NOTE" ]; then
+                echo "Receipt recovered via tree-hash fallback (squash-merge — a sibling SHA carries a receipt for the matching tree)."
+              fi
+            fi
+          fi
+          if [ -z "$NOTE" ]; then
+            echo "::error::No validation receipt found on refs/notes/validation for HEAD."
+            echo "::error::CI verifies receipts; it does not produce them. Run \`panoptic-guard commit \"<your-message>\"\` (or \`panoptic-guard release\` for release pushes) locally — those commands sign and push the receipt alongside the commit."
+            exit 1
+          fi
+          RESULT=$(echo "$NOTE" | node -e "
+            const d=require('fs').readFileSync(0,'utf8');
+            try {
+              const r=JSON.parse(d);
+              if (r.status !== 'pass') { console.log('fail:status'); process.exit(0); }
+              const keys=Object.keys(r.validators||{});
+              const expected=r.expectedValidators||[];
+              // Issue #278 Finding 2 — empty-validators trust-boundary
+              // rejection. The receipt schema permits expectedValidators=[]
+              // (legitimate local-tree-only signal for stacks with zero
+              // committed:* validators — see runPostCommit). CI is the
+              // verifier-side trust boundary: an empty list at this gate
+              // would otherwise satisfy the length-equality + for-of checks
+              // vacuously, silently green-lighting a misconfigured or
+              // spoofed local toolchain. Fail explicitly with an actionable
+              // error directing to panoptic-guard commit/release.
+              if (expected.length === 0) { console.log('fail:empty-validators'); process.exit(0); }
+              if (keys.length !== expected.length) { console.log('fail:incomplete'); process.exit(0); }
+              for (const id of expected) {
+                if (!r.validators[id]) { console.log('fail:incomplete'); process.exit(0); }
+              }
+              console.log('pass');
+            } catch { console.log('fail:corrupt'); }
+          ")
+          case "$RESULT" in
+            pass)
+              echo "Receipt present and complete for HEAD."
+              ;;
+            fail:status)
+              echo "::error::Validation receipt for HEAD has status != 'pass'."
+              echo "::error::Re-run \`panoptic-guard commit \"<your-message>\"\` (or \`panoptic-guard release\`) locally — those commands rerun validators and refresh the signed receipt."
+              exit 1
+              ;;
+            fail:incomplete)
+              echo "::error::Validation receipt for HEAD is incomplete (missing one or more expected validators)."
+              echo "::error::Re-run \`panoptic-guard commit \"<your-message>\"\` (or \`panoptic-guard release\`) locally to produce a complete signed receipt."
+              exit 1
+              ;;
+            fail:corrupt)
+              echo "::error::Validation receipt for HEAD failed to parse as JSON."
+              echo "::error::Re-run \`panoptic-guard commit \"<your-message>\"\` (or \`panoptic-guard release\`) locally to produce a fresh signed receipt."
+              exit 1
+              ;;
+            fail:empty-validators)
+              echo "::error::Validation receipt for HEAD has an empty \`expectedValidators\` list (no validators were declared at receipt-write time). CI rejects this as a trust-boundary violation — a guard-managed project must declare at least one validator."
+              echo "::error::Re-run \`panoptic-guard commit \"<your-message>\"\` (or \`panoptic-guard release\`) locally to produce a complete signed receipt with a non-empty \`expectedValidators\` list."
+              exit 1
+              ;;
+            *)
+              echo "::error::Unexpected receipt verification result: $RESULT"
+              echo "::error::This should be impossible if the process was followed. Either (a) a guard/orchestration bug — file an issue with the receipt dump above; or (b) the commit was pushed bypassing guard (SKIP_GUARD / --no-verify / direct push) — re-run \`panoptic-guard commit \"<your-message>\"\` (or \`panoptic-guard release\`) and push properly. Do not skip guard."
+              exit 1
+              ;;
+          esac
