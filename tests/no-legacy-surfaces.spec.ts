@@ -129,8 +129,14 @@ describe('no packed tarball is committed', () => {
     expect(tracked.length).toBeGreaterThan(0)
   })
 
-  it('tracks no .tgz anywhere', () => {
-    expect(tracked.filter(file => file.endsWith('.tgz'))).toEqual([])
+  // Both conditions matter: release staging packs an untracked .tgz into the
+  // root, and guard validates a worktree whose index still names files the
+  // pending commit deletes. Only a tarball that is tracked AND present is one
+  // the repository actually carries.
+  it('carries no .tgz that is both tracked and present', () => {
+    const carried = tracked.filter(file => file.endsWith('.tgz')).filter(file => existsSync(path.join(repoRoot, file)))
+
+    expect(carried).toEqual([])
   })
 })
 

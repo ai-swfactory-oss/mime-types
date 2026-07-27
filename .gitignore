@@ -58,3 +58,6 @@ node_modules
 .claude/cache/
 .claude/tmp/
 .claude/logs/
+
+# Output of `npm pack` — release staging packs into the repo root
+*.tgz
