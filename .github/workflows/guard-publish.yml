@@ -1,0 +1,180 @@
+# DO NOT EDIT — generated from src/blueprints/guard-publish.ts; run `panoptic-guard commit` to refresh
+name: Guard publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        type: string
+        description: 'Commit SHA to publish (passed by panoptic-guard release)'
+        required: true
+      version:
+        type: string
+        description: 'Release version vX.Y.Z (passed by panoptic-guard release)'
+        required: false
+      draft-ref:
+        type: string
+        description: 'Draft GitHub Release ref/tag staged by panoptic-release stage (passed by panoptic-guard release)'
+        required: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # `panoptic-release publish` fetches a draft-release asset and does
+    # an `npm publish` + a draft→published flip; allow time for slow
+    # registry round-trips while keeping a hard cap so absent-credentials
+    # / network outages fail fast rather than running for hours.
+    timeout-minutes: 15
+    permissions:
+      # `github.token` is scoped here to THIS repo's own namespace:
+      #   contents: write  → flip draft Release → published + create the
+      #                       vX.Y.Z tag (tag-at-publish, exactly once).
+      #   packages: write  → `npm publish` the prebuilt, verified .tgz.
+      # The cross-repo read PAT is gated to the install-tooling step
+      # only — it is NOT available to the publish step (pg#705 §Token
+      # Model REMOTE-mode).
+      contents: write
+      packages: write
+    steps:
+      # 1/7 — Provenance checkout ONLY. `panoptic-guard release`
+      # dispatches this AFTER local validation produced a signed receipt
+      # AND `panoptic-release stage` uploaded the publishable artifact
+      # as a draft-release asset. This workflow does NOT re-validate
+      # (CI is not a validator) and does NOT build the project under
+      # release (no project install / no project build follow).
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.sha }}
+
+      # 2/7 — Fetch the validation notes ref into the runner's local
+      # repo. `actions/checkout@v4` even at `fetch-depth: 0` does NOT
+      # fetch `refs/notes/*` — git notes refs must be fetched
+      # explicitly. Without this step, `panoptic-release publish`'s
+      # `defaultReadReceiptNote` reader (`git notes
+      # --ref=refs/notes/validation show HEAD`) finds nothing and
+      # aborts with "no validation receipt found at
+      # refs/notes/validation on HEAD — cannot hard-gate the artifact"
+      # (pg#811). The signed receipt itself was produced locally by
+      # `panoptic-guard release` before dispatch; this step only
+      # materialises it on the runner so the publish hard-gate can read
+      # it. This is NOT re-validation — no validator runs here.
+      - name: Fetch validation notes
+        # pg#880: `--refmap=` is MANDATORY. If a future hook-install step
+        # ever runs in this workflow, the configured
+        # `remote.origin.fetch = +refs/notes/validation:refs/notes/validation`
+        # would piggyback this fetch and force-clobber the local notes ref.
+        # The flag clears the configured refspec map for this invocation so
+        # only the explicit refspec is applied.
+        run: git fetch --refmap= origin 'refs/notes/validation:refs/notes/validation'
+
+      # 3/7 — Node + scoped-registry auth for the install-tooling step.
+      # `always-auth: true` makes the npm client send the
+      # NODE_AUTH_TOKEN value with every request to the configured
+      # registry; combined with `scope: '@ai-swfactory'` this scopes
+      # auth to the @ai-swfactory namespace on npm.pkg.github.com only.
+      # node-version 24 — Node 24 LTS (Active LTS since Oct 2025).
+      # Pinned explicitly so the publish runner stays deterministic and
+      # ahead of the GitHub Actions Node 20 deprecation (forced Node 24
+      # for JS actions on 2026-06-02). See pg#791 / cf#704.
+      - name: Set up Node for panoptic-release install
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com/
+          scope: '@ai-swfactory'
+          always-auth: true
+
+      # 4/7 — Install the panoptic-release CLI globally on the runner.
+      # This step uses the cross-repo read-only PAT
+      # (`AI_SWFACTORY_PACKAGES_TOKEN`, `read:packages`) — scoped
+      # exclusively to fetching this one tooling package from
+      # npm.pkg.github.com. The PAT is NOT available to step 7/7 (the
+      # publish step), which uses only `github.token`. Without this
+      # step the publish step fails in ~5s with
+      # `panoptic-release: command not found` (pg#705 — pg#656 actual
+      # root cause).
+      - name: Install panoptic-release tooling
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.AI_SWFACTORY_PACKAGES_TOKEN }}
+        run: npm install -g @ai-swfactory/panoptic-release@13.0.2
+
+      # 5/7 — Put `pnpm` on PATH for `panoptic-release publish` (#1094).
+      #
+      # `panoptic-release publish` runs an already-published check before it
+      # publishes, and that check is `PnpmOperations.isVersionPublished`
+      # (`@ai-swfactory/seams-pkg-manager`) spawning
+      # `pnpm view <pkg>@<version> …`. A GitHub-hosted runner that has only
+      # run `actions/setup-node` has `node` + `npm` — no `pnpm` — so that
+      # spawn died with `spawn pnpm ENOENT` and failed the whole publish
+      # (run 27566014390).
+      #
+      # The bug was latent through pg Waves 0–3 because the happy
+      # new-version path (fetch → verifyArtifact → `npm publish` → flip
+      # draft→published) never reaches the check. ONLY the re-publish /
+      # idempotent path — dispatching a version already live on the registry
+      # — calls it, so the missing binary surfaced the first time a release
+      # re-published an un-bumped version.
+      #
+      # This does NOT reintroduce a pg#653 eliminated operation: it installs
+      # the pnpm BINARY as tooling, exactly as the step above installs
+      # `panoptic-release`. No `pnpm install` of project dependencies, no
+      # lockfile, no build ever runs here.
+      #
+      # No credentials: `pnpm` is public and unscoped, and
+      # `actions/setup-node` writes only the scoped
+      # `@ai-swfactory:registry=` line (plus a host-scoped auth token) into
+      # the runner's .npmrc — it does NOT repoint the default registry — so
+      # this resolves from registry.npmjs.org anonymously.
+      - name: Install pnpm for panoptic-release registry queries
+        run: npm install -g pnpm@10
+
+      - name: Assert the dispatched draft is the one that will be published
+        if: ${{ inputs.version != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_TAG: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          releases="$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 --json tagName,isDraft)"
+          # Count and render from the SAME jq filter so the two can never
+          # disagree. Counting lines instead (`grep -c .`) mis-counts a draft
+          # whose tagName is empty — GitHub permits one — and an empty trailing
+          # line would make two drafts look like one, failing OPEN in exactly
+          # the state this assertion exists to catch.
+          draft_count="$(printf '%s' "${releases}" | jq '[.[] | select(.isDraft)] | length')"
+          # Space-joined on ONE line: a multi-line value is truncated at the
+          # first newline in a `::error::` annotation, so the Checks UI would
+          # show a half-finished sentence.
+          drafts="$(printf '%s' "${releases}" | jq -r '[.[] | select(.isDraft) | .tagName] | join(" ")')"
+          if [ "${draft_count}" -eq 0 ]; then
+            echo "::error::guard-publish: this run was dispatched to publish ${EXPECTED_TAG}, but the repo has no draft release at all."
+            echo "::error::Re-run \`panoptic-guard release\` so the stage leg recreates the draft for ${EXPECTED_TAG}."
+            exit 1
+          fi
+          if [ "${draft_count}" -ne 1 ]; then
+            echo "::error::guard-publish: expected exactly 1 draft release (${EXPECTED_TAG}) but found ${draft_count}: ${drafts}."
+            echo "::error::\`panoptic-release publish\` selects the HIGHEST-version draft, so it would publish the wrong one. Use \`gh release delete <tag>\` to remove the stale drafts, then re-run \`panoptic-guard release\`."
+            exit 1
+          fi
+          if [ "${drafts}" != "${EXPECTED_TAG}" ]; then
+            echo "::error::guard-publish: this run was dispatched to publish ${EXPECTED_TAG}, but the only draft on the repo is ${drafts}."
+            echo "::error::Refusing to publish a draft this release did not stage. Re-run \`panoptic-guard release\` so the stage leg recreates the draft for ${EXPECTED_TAG}."
+            exit 1
+          fi
+          echo "guard-publish: confirmed the sole draft release is ${EXPECTED_TAG} — proceeding to publish."
+
+      - name: Run panoptic-release publish
+        run: |
+          # §Token Model REMOTE-mode: credentials are explicit CLI inputs.
+          # No NPM_TOKEN/GITHUB_TOKEN ambient contract exists. The scoped
+          # github.token publishes this repo's package and finalizes its
+          # release; the cross-repo PAT remains confined to tooling install.
+          if ! panoptic-release publish \
+            --npm-token "${{ github.token }}" \
+            --github-token "${{ github.token }}" \
+            --no-env; then
+            echo "::error::panoptic-release publish failed inside the dispatched guard-publish.yml run (fetch / guard-SDK verifyArtifact hard-gate / npm publish / draft→published flip)."
+            echo "::error::Re-run \`panoptic-guard release\` locally — that command actively waits on the dispatched workflow and surfaces failures with full local context."
+            exit 1
+          fi

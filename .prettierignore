@@ -1,4 +1,9 @@
+# DO NOT EDIT — generated from src/blueprints/prettierignore.ts; run `panoptic-guard commit` to refresh
 node_modules
 dist
 pnpm-lock.yaml
 .claude
+.hooks
+.guard
+.guard-peer-deps-store
+.guard-peer-deps-node-modules

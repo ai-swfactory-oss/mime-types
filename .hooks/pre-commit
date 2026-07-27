@@ -1,3 +1,4 @@
 #!/bin/sh
+# DO NOT EDIT — generated from src/blueprints/pre-commit.ts; run `panoptic-guard commit` to refresh
 
-claude-factory hook file-change --staged
+panoptic-guard pre-commit --__hook-context "$@"

@@ -1,5 +1,6 @@
-import { charset, contentType, extension, extensions, lookup, types } from '@ai-swfactory/mime-types'
 import { describe, expect, it } from 'vitest'
+
+import { charset, contentType, extension, extensions, lookup, types } from '../src/index'
 
 describe('MimeTypes', () => {
   describe('lookup', () => {

@@ -1,0 +1,4 @@
+#!/bin/sh
+# DO NOT EDIT — generated from src/blueprints/pre-push.ts; run `panoptic-guard commit` to refresh
+
+panoptic-guard pre-push --__hook-context "$*"

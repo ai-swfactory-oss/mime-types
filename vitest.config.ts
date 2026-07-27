@@ -1,4 +1,6 @@
-import { nodePreset } from '@ai-swfactory/panoptic-presets/vitest'
-import { defineConfig } from 'vitest/config'
+// DO NOT EDIT — generated from src/blueprints/vitest-config.ts; run `panoptic-guard commit` to refresh
 
-export default defineConfig(nodePreset())
+import { nodePreset } from '@ai-swfactory/panoptic-presets/vitest'
+import { defineConfig, mergeConfig } from 'vitest/config'
+
+export default mergeConfig(defineConfig(nodePreset()), defineConfig({ test: { exclude: ['tests/consumer/**'] } }))

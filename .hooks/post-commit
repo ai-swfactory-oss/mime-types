@@ -1,0 +1,4 @@
+#!/bin/sh
+# DO NOT EDIT — generated from src/blueprints/post-commit.ts; run `panoptic-guard commit` to refresh
+
+panoptic-guard post-commit --__hook-context "$@"

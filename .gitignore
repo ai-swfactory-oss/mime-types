@@ -1,3 +1,4 @@
+# DO NOT EDIT — generated from src/blueprints/gitignore.ts; run `panoptic-guard commit` to refresh
 # Dependencies
 node_modules/
 
@@ -45,3 +46,15 @@ Thumbs.db
 .github/ai-swfactory-actions/
 !.env.example
 CHANGELOG.md
+node_modules
+.panoptic/worktree-registry/
+# panoptic-guard peer-deps validator isolated store / modules (ephemeral; pg#541)
+.guard-peer-deps-store/
+.guard-peer-deps-node-modules/
+# Claude Code local state — repo-local ephemeral artifacts (safer to ignore than to whitelist)
+.claude/scheduled_tasks.lock
+.claude/worktrees/
+.claude/traces/
+.claude/cache/
+.claude/tmp/
+.claude/logs/
