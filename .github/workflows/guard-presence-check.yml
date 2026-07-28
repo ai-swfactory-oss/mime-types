@@ -298,7 +298,7 @@ jobs:
                 ;;
               *)
                 echo "::error::commit $SHA \"$SUBJECT\": unexpected receipt verification result: $RESULT"
-                echo "::error::This should be impossible if the process was followed. Either (a) a guard/orchestration bug — file an issue with the receipt dump above; or (b) the commit was pushed bypassing guard (SKIP_GUARD / --no-verify / direct push) — re-run \`panoptic-guard commit \"<your-message>\"\` (or \`panoptic-guard release\`) and push properly. Do not skip guard."
+                echo "::error::A result in this shape is not what a completed guard run reports. Either guard was interrupted or hit an orchestration bug — file an issue with the receipt dump above; or the commit reached the remote without a guard run signing it (SKIP_GUARD / --no-verify / a direct push). Re-run \`panoptic-guard commit \"<your-message>\"\` (or \`panoptic-guard release\`) to re-validate and sign. Do not skip guard."
                 exit 1
                 ;;
             esac

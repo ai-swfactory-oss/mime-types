@@ -97,7 +97,7 @@ jobs:
       - name: Install panoptic-release tooling
         env:
           NODE_AUTH_TOKEN: ${{ secrets.AI_SWFACTORY_PACKAGES_TOKEN }}
-        run: npm install -g @ai-swfactory/panoptic-release@13.0.2
+        run: npm install -g @ai-swfactory/panoptic-release@14.0.0
 
       # 5/7 — Put `pnpm` on PATH for `panoptic-release publish` (#1094).
       #

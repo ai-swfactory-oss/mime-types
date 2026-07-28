@@ -8,6 +8,27 @@ on:
     branches: [main]
 
 jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+          registry-url: https://npm.pkg.github.com/
+          scope: '@ai-swfactory'
+          always-auth: true
+      - name: Install dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.AI_SWFACTORY_PACKAGES_TOKEN }}
+        run: pnpm install --frozen-lockfile
+      - run: pnpm tsc --noEmit
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -18,7 +39,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: 'package.json'
+          node-version: '24'
           cache: 'pnpm'
           registry-url: https://npm.pkg.github.com/
           scope: '@ai-swfactory'

@@ -5,7 +5,6 @@
 .github/workflows/guard-publish.yml linguist-generated=true
 .github/workflows/test.yml linguist-generated=true
 .gitignore linguist-generated=true
-.hooks/post-commit linguist-generated=true
 .hooks/pre-commit linguist-generated=true
 .hooks/pre-push linguist-generated=true
 .prettierignore linguist-generated=true
