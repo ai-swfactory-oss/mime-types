@@ -61,3 +61,5 @@ node_modules
 
 # Output of `npm pack` — release staging packs into the repo root
 *.tgz
+# DO NOT EDIT — generated from src/blueprints/gitignore.ts; run `claude-factory work commit` to refresh
+.direnv/

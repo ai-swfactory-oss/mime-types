@@ -13,6 +13,8 @@
     ".vscode/settings.json": true,
     "eslint.config.ts": true,
     "tsconfig.json": true,
-    "vitest.config.ts": true
+    "vitest.config.ts": true,
+    ".envrc": true,
+    "nix/managed.nix": true
   }
 }

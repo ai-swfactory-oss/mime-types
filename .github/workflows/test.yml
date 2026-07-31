@@ -1,4 +1,4 @@
-# DO NOT EDIT — generated from src/domain/blueprints/tests.ts; run `panoptic-guard commit` to refresh
+# DO NOT EDIT — generated from src/domain/blueprints/tests.ts; run `claude-factory work commit` to refresh
 name: Tests
 
 on:
