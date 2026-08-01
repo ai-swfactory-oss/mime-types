@@ -1,4 +1,4 @@
-# DO NOT EDIT — generated from src/blueprints/guard-publish.ts; run `panoptic-guard commit` to refresh
+# DO NOT EDIT — generated from src/blueprints/guard-publish.ts; run `claude-factory work commit` to refresh
 name: Guard publish
 
 on:
@@ -6,16 +6,12 @@ on:
     inputs:
       sha:
         type: string
-        description: 'Commit SHA to publish (passed by panoptic-guard release)'
+        description: 'Commit SHA to publish (passed by claude-factory work finish)'
         required: true
-      version:
+      plan:
         type: string
-        description: 'Release version vX.Y.Z (passed by panoptic-guard release)'
-        required: false
-      draft-ref:
-        type: string
-        description: 'Draft GitHub Release ref/tag staged by panoptic-release stage (passed by panoptic-guard release)'
-        required: false
+        description: 'Bound release-plan.json returned by panoptic-release stage (passed by claude-factory work finish)'
+        required: true
 
 jobs:
   publish:
@@ -36,7 +32,7 @@ jobs:
       contents: write
       packages: write
     steps:
-      # 1/7 — Provenance checkout ONLY. `panoptic-guard release`
+      # 1/6 — Provenance checkout ONLY. `claude-factory work finish`
       # dispatches this AFTER local validation produced a signed receipt
       # AND `panoptic-release stage` uploaded the publishable artifact
       # as a draft-release asset. This workflow does NOT re-validate
@@ -47,7 +43,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.sha }}
 
-      # 2/7 — Fetch the validation notes ref into the runner's local
+      # 2/6 — Fetch the validation notes ref into the runner's local
       # repo. `actions/checkout@v4` even at `fetch-depth: 0` does NOT
       # fetch `refs/notes/*` — git notes refs must be fetched
       # explicitly. Without this step, `panoptic-release publish`'s
@@ -56,7 +52,7 @@ jobs:
       # aborts with "no validation receipt found at
       # refs/notes/validation on HEAD — cannot hard-gate the artifact"
       # (pg#811). The signed receipt itself was produced locally by
-      # `panoptic-guard release` before dispatch; this step only
+      # `claude-factory work finish` before dispatch; this step only
       # materialises it on the runner so the publish hard-gate can read
       # it. This is NOT re-validation — no validator runs here.
       - name: Fetch validation notes
@@ -68,7 +64,7 @@ jobs:
         # only the explicit refspec is applied.
         run: git fetch --refmap= origin 'refs/notes/validation:refs/notes/validation'
 
-      # 3/7 — Node + scoped-registry auth for the install-tooling step.
+      # 3/6 — Node + scoped-registry auth for the install-tooling step.
       # `always-auth: true` makes the npm client send the
       # NODE_AUTH_TOKEN value with every request to the configured
       # registry; combined with `scope: '@ai-swfactory'` this scopes
@@ -85,7 +81,7 @@ jobs:
           scope: '@ai-swfactory'
           always-auth: true
 
-      # 4/7 — Install the panoptic-release CLI globally on the runner.
+      # 4/6 — Install the panoptic-release CLI globally on the runner.
       # This step uses the cross-repo read-only PAT
       # (`AI_SWFACTORY_PACKAGES_TOKEN`, `read:packages`) — scoped
       # exclusively to fetching this one tooling package from
@@ -97,9 +93,9 @@ jobs:
       - name: Install panoptic-release tooling
         env:
           NODE_AUTH_TOKEN: ${{ secrets.AI_SWFACTORY_PACKAGES_TOKEN }}
-        run: npm install -g @ai-swfactory/panoptic-release@14.0.0
+        run: npm install -g @ai-swfactory/panoptic-release@17.0.0
 
-      # 5/7 — Put `pnpm` on PATH for `panoptic-release publish` (#1094).
+      # 5/6 — Put `pnpm` on PATH for `panoptic-release publish` (#1094).
       #
       # `panoptic-release publish` runs an already-published check before it
       # publishes, and that check is `PnpmOperations.isVersionPublished`
@@ -129,52 +125,26 @@ jobs:
       - name: Install pnpm for panoptic-release registry queries
         run: npm install -g pnpm@10
 
-      - name: Assert the dispatched draft is the one that will be published
-        if: ${{ inputs.version != '' }}
+      - name: Run panoptic-release publish
         env:
-          GH_TOKEN: ${{ github.token }}
-          EXPECTED_TAG: ${{ inputs.version }}
+          # The bound release plan, verbatim from `panoptic-release stage`.
+          # It is release METADATA (ids, hashes, tag), never a credential —
+          # §Token Model is unaffected: the two token slots below remain
+          # the only credentials this step sees.
+          RELEASE_PLAN: ${{ inputs.plan }}
         run: |
           set -euo pipefail
-          releases="$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 --json tagName,isDraft)"
-          # Count and render from the SAME jq filter so the two can never
-          # disagree. Counting lines instead (`grep -c .`) mis-counts a draft
-          # whose tagName is empty — GitHub permits one — and an empty trailing
-          # line would make two drafts look like one, failing OPEN in exactly
-          # the state this assertion exists to catch.
-          draft_count="$(printf '%s' "${releases}" | jq '[.[] | select(.isDraft)] | length')"
-          # Space-joined on ONE line: a multi-line value is truncated at the
-          # first newline in a `::error::` annotation, so the Checks UI would
-          # show a half-finished sentence.
-          drafts="$(printf '%s' "${releases}" | jq -r '[.[] | select(.isDraft) | .tagName] | join(" ")')"
-          if [ "${draft_count}" -eq 0 ]; then
-            echo "::error::guard-publish: this run was dispatched to publish ${EXPECTED_TAG}, but the repo has no draft release at all."
-            echo "::error::Re-run \`panoptic-guard release\` so the stage leg recreates the draft for ${EXPECTED_TAG}."
-            exit 1
-          fi
-          if [ "${draft_count}" -ne 1 ]; then
-            echo "::error::guard-publish: expected exactly 1 draft release (${EXPECTED_TAG}) but found ${draft_count}: ${drafts}."
-            echo "::error::\`panoptic-release publish\` selects the HIGHEST-version draft, so it would publish the wrong one. Use \`gh release delete <tag>\` to remove the stale drafts, then re-run \`panoptic-guard release\`."
-            exit 1
-          fi
-          if [ "${drafts}" != "${EXPECTED_TAG}" ]; then
-            echo "::error::guard-publish: this run was dispatched to publish ${EXPECTED_TAG}, but the only draft on the repo is ${drafts}."
-            echo "::error::Refusing to publish a draft this release did not stage. Re-run \`panoptic-guard release\` so the stage leg recreates the draft for ${EXPECTED_TAG}."
-            exit 1
-          fi
-          echo "guard-publish: confirmed the sole draft release is ${EXPECTED_TAG} — proceeding to publish."
-
-      - name: Run panoptic-release publish
-        run: |
           # §Token Model REMOTE-mode: credentials are explicit CLI inputs.
           # No NPM_TOKEN/GITHUB_TOKEN ambient contract exists. The scoped
           # github.token publishes this repo's package and finalizes its
           # release; the cross-repo PAT remains confined to tooling install.
+          plan_path="${RUNNER_TEMP}/release-plan.json"
+          printf '%s' "${RELEASE_PLAN}" > "${plan_path}"
           if ! panoptic-release publish \
+            --plan "${plan_path}" \
             --npm-token "${{ github.token }}" \
-            --github-token "${{ github.token }}" \
-            --no-env; then
+            --github-token "${{ github.token }}"; then
             echo "::error::panoptic-release publish failed inside the dispatched guard-publish.yml run (fetch / guard-SDK verifyArtifact hard-gate / npm publish / draft→published flip)."
-            echo "::error::Re-run \`panoptic-guard release\` locally — that command actively waits on the dispatched workflow and surfaces failures with full local context."
+            echo "::error::Re-run \`claude-factory work finish\` locally — that command actively waits on the dispatched workflow and surfaces failures with full local context."
             exit 1
           fi

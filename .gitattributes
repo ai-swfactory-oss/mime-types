@@ -1,5 +1,6 @@
-# DO NOT EDIT — generated from src/blueprints/gitattributes.ts; run `panoptic-guard commit` to refresh
+# DO NOT EDIT — generated from src/blueprints/gitattributes.ts; run `claude-factory work commit` to refresh
 
+.envrc linguist-generated=true
 .gitattributes linguist-generated=true
 .github/workflows/guard-presence-check.yml linguist-generated=true
 .github/workflows/guard-publish.yml linguist-generated=true
@@ -11,5 +12,6 @@
 .prettierrc linguist-generated=true
 .vscode/settings.json linguist-generated=true
 eslint.config.ts linguist-generated=true
+nix/managed.nix linguist-generated=true
 tsconfig.json linguist-generated=true
 vitest.config.ts linguist-generated=true
