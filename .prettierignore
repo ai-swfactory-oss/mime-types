@@ -1,11 +1,20 @@
-# DO NOT EDIT — generated from src/blueprints/prettierignore.ts; run `claude-factory work commit` to refresh
+# DO NOT EDIT — generated from src/domain/blueprints/prettierignore.ts; run `claude-factory work commit --message "<your-message>"` to refresh
 node_modules
 dist
+/manifest.json
 pnpm-lock.yaml
 .claude
-.hooks
 .guard
-.guard-peer-deps-store
-.guard-peer-deps-node-modules
 *.hbs
 *.handlebars
+/.envrc
+/.gitattributes
+/.github/workflows/guard-presence-check.yml
+/.gitignore
+/.prettierignore
+/.prettierrc
+/.vscode/settings.json
+/eslint.config.ts
+/nix/managed.nix
+/tsconfig.json
+/vitest.config.ts

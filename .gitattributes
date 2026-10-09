@@ -1,13 +1,9 @@
-# DO NOT EDIT — generated from src/blueprints/gitattributes.ts; run `claude-factory work commit` to refresh
+# DO NOT EDIT — generated from src/application/blueprints/gitattributes.ts; run `claude-factory work commit --message "<your-message>"` to refresh
 
 .envrc linguist-generated=true
 .gitattributes linguist-generated=true
 .github/workflows/guard-presence-check.yml linguist-generated=true
-.github/workflows/guard-publish.yml linguist-generated=true
-.github/workflows/test.yml linguist-generated=true
 .gitignore linguist-generated=true
-.hooks/pre-commit linguist-generated=true
-.hooks/pre-push linguist-generated=true
 .prettierignore linguist-generated=true
 .prettierrc linguist-generated=true
 .vscode/settings.json linguist-generated=true

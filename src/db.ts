@@ -9128,12 +9128,11 @@ type DbValue = (typeof db)[MimeType]
 type ExtractExtension<V> = V extends { extensions: readonly (infer E)[] } ? E : never
 export type Extension = ExtractExtension<DbValue>
 type ExtractSource<V> = V extends { source: infer S } ? S : never
-/** All known source literals derived from the db. */
+
 export type Source = NonNullable<ExtractSource<DbValue>>
 
-// Extract charset literals (filtering out undefined)
 type ExtractCharset<V> = V extends { charset: infer C } ? C : never
-/** All known charset literals derived from the db. */
+
 export type Charset = NonNullable<ExtractCharset<DbValue>>
 
 export interface MimeData {

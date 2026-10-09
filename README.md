@@ -1,17 +1,35 @@
-# @ai-swfactory/mime-types
+# @ai-swfactory-oss/mime-types
 
 TypeScript MIME type database and utilities with full type inference.
 
 ## Installation
 
+The package is published to GitHub Packages, which needs two things even for public packages.
+
+1. The scope line, in your project's `.npmrc` (safe to commit):
+
+   ```
+   @ai-swfactory-oss:registry=https://npm.pkg.github.com
+   ```
+
+2. A token with `read:packages` (a classic personal access token), in your **user** `~/.npmrc`, never in the repository:
+
+   ```
+   //npm.pkg.github.com/:_authToken=<token>
+   ```
+
+   In GitHub Actions, use `actions/setup-node` with `registry-url: https://npm.pkg.github.com`, `scope: "@ai-swfactory-oss"` and `NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`, and grant the job `packages: read`.
+
+Then:
+
 ```bash
-pnpm add @ai-swfactory/mime-types
+pnpm add @ai-swfactory-oss/mime-types
 ```
 
 ## Usage
 
 ```typescript
-import { lookup, extension, contentType, charset, types, extensions } from '@ai-swfactory/mime-types'
+import { lookup, extension, contentType, charset, types, extensions } from '@ai-swfactory-oss/mime-types'
 
 // Lookup MIME type by extension
 lookup('json') // => 'application/json'
@@ -45,7 +63,7 @@ extensions['image/png'] // => ['png']
 All return types are fully typed with literal unions:
 
 ```typescript
-import type { MimeType, Extension, Charset } from '@ai-swfactory/mime-types'
+import type { MimeType, Extension, Charset } from '@ai-swfactory-oss/mime-types'
 
 // MimeType is a union of all known MIME types
 const mime: MimeType = 'application/json'
@@ -59,19 +77,19 @@ const cs: Charset = 'UTF-8'
 
 ## API
 
-### `lookup(path: string): MimeType | false`
+### `lookup(path: unknown): MimeType | false`
 
 Get the MIME type for a file path or extension.
 
-### `extension(type: string): Extension | false`
+### `extension(type: unknown): Extension | false`
 
 Get the default extension for a MIME type.
 
-### `contentType(str: string): string | false`
+### `contentType(str: unknown): string | false`
 
 Create a full Content-Type header value for a MIME type or extension.
 
-### `charset(type: string): Charset | 'UTF-8' | false`
+### `charset(type: unknown): Charset | 'UTF-8' | false`
 
 Get the default charset for a MIME type.
 
@@ -83,7 +101,7 @@ Map of extensions to MIME types.
 
 Map of MIME types to extensions.
 
-### `charsets.lookup(type: string)`
+### `charsets.lookup(type: unknown)`
 
 Alias for `charset()`.
 
