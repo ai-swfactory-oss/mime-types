@@ -1,5 +1,16 @@
 {
   "extends": "@ai-swfactory/panoptic-presets/tsconfig/node.json",
-  "compilerOptions": { "paths": { "@/*": ["./src/*"] } },
-  "include": ["src", "tests", "*.ts", "*.config.mjs"]
+  "compilerOptions": {
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "tests",
+    "*.ts",
+    "*.config.mjs"
+  ]
 }

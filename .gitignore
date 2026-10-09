@@ -1,4 +1,4 @@
-# DO NOT EDIT — generated from src/blueprints/gitignore.ts; run `panoptic-guard commit` to refresh
+# DO NOT EDIT — generated from src/domain/blueprints/gitignore.ts; run `claude-factory work commit --message "<your-message>"` to refresh
 # Dependencies
 node_modules/
 
@@ -61,5 +61,6 @@ node_modules
 
 # Output of `npm pack` — release staging packs into the repo root
 *.tgz
-# DO NOT EDIT — generated from src/blueprints/gitignore.ts; run `claude-factory work commit` to refresh
 .direnv/
+/manifest.json
+.guard/
