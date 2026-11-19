@@ -15,6 +15,8 @@
     "tsconfig.json": true,
     "vitest.config.ts": true,
     ".envrc": true,
-    "nix/managed.nix": true
+    "nix/managed.nix": true,
+    ".nvmrc": true,
+    "oxlint.config.ts": true
   }
 }

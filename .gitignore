@@ -64,3 +64,9 @@ node_modules
 .direnv/
 /manifest.json
 .guard/
+# Emitted by guard on every run, never tracked: the editor and the language service read it from here
+oxlint.config.ts
+# Emitted by guard before it linted with Oxlint; a copy left in a checkout stays untracked
+eslint.config.ts
+# Written for the length of one tsc run and removed after it
+.panoptic-guard-tsc.tsconfig.json

@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     # CI verifies receipts; it does not produce them. On a pull request the
     # developer signs the receipt locally through the commit verb, which
-    # pushes the validation note alongside the commit. On a push to main the
+    # pushes the receipt ref alongside the commit. On a push to main the
     # commit has already landed: a commit without a receipt there reached
     # main outside the landing verb, which is an incident to report, and no
     # verb repairs it; the next landing restores a receipted head. This job
@@ -34,7 +34,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           registry-url: https://npm.pkg.github.com/
           scope: '@ai-swfactory'
           always-auth: true
@@ -43,13 +43,15 @@ jobs:
         run: |
           set -euo pipefail
           # `--refmap=` is mandatory: it restricts this invocation to the
-          # explicit refspec so a configured
-          # `remote.origin.fetch = +refs/notes/validation:refs/notes/validation`
-          # cannot piggyback and force-clobber the local ref. `--depth=1`
-          # takes the notes tip and its full note contents without the
-          # thousands of ancestor commits behind it. A failed fetch read no
-          # note, so it ends the step as could-not-determine and never
-          # reaches a verdict that would call the note absent.
+          # explicit refspecs so a configured
+          # `remote.origin.fetch` cannot piggyback and force-clobber a local
+          # ref. The notes refspec is a pattern, so an origin that holds no
+          # notes ref at all is not a failed fetch: a pattern that matches
+          # nothing fetches nothing. `--depth=1` takes the receipt refs and
+          # the notes tip without the thousands of ancestor commits behind
+          # them. A failed fetch read no receipt, so it ends the step as
+          # could-not-determine and never reaches a verdict that would call
+          # the receipt absent.
           #
           # On a pull request the head may reach origin before its receipt
           # note: the landing verb re-attests while CI runs. The step then
@@ -65,9 +67,9 @@ jobs:
           deadline=$(( $(date +%s) + wait_seconds ))
           while true; do
             fetch_status=0
-            git fetch --refmap= --depth=1 origin '+refs/notes/validation:refs/notes/validation' || fetch_status=$?
+            git fetch --refmap= --depth=1 origin '+refs/notes/validation*:refs/notes/validation*' '+refs/receipts/*:refs/receipts/*' || fetch_status=$?
             if [ "$fetch_status" -ne 0 ]; then
-              echo "::error::could-not-determine: fetching refs/notes/validation from origin failed (git exit ${fetch_status}, output above), so no note was read and nothing established that the receipt is absent."
+              echo "::error::could-not-determine: fetching the receipt refs from origin failed (git exit ${fetch_status}, output above), so no receipt was read and nothing established that the receipt is absent."
               if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
                 echo "::error::Report this failed fetch as an incident. The next landing through \`claude-factory work finish \"<issue>\"\` checks main again."
               else
@@ -75,7 +77,7 @@ jobs:
               fi
               exit 1
             fi
-            if git notes --ref=validation show "$head_sha" > /dev/null 2>&1; then
+            if git cat-file -e "refs/receipts/$head_sha" 2> /dev/null || git notes --ref=validation show "$head_sha" > /dev/null 2>&1; then
               break
             fi
             remaining=$(( deadline - $(date +%s) ))
@@ -106,10 +108,13 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.AI_SWFACTORY_PACKAGES_TOKEN }}
         run: |
           set -euo pipefail
+          npm config set '@ai-swfactory:registry' 'https://npm.pkg.github.com/'
+          npm config set '@ai-swfactory-oss:registry' 'https://npm.pkg.github.com/'
           strict_semver='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
           version=latest
           reason="the receipt note was signed by a guard that predates the host field"
-          note="$(git notes --ref=validation show HEAD 2>/dev/null || true)"
+          head_commit="$(git rev-parse HEAD)"
+          note="$(git cat-file blob "refs/receipts/$head_commit" 2>/dev/null || git notes --ref=validation show HEAD 2>/dev/null || true)"
           declares_host="$(printf '%s' "$note" | jq -r 'if type == "object" then (if has("host") then "yes" else "no" end) else "no" end' 2>/dev/null || true)"
           if [ "$declares_host" = "yes" ]; then
             host_name="$(printf '%s' "$note" | jq -r '.host | objects | .name | strings' 2>/dev/null || true)"

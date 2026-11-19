@@ -6,18 +6,18 @@ export type { MimeData } from './db'
 const EXTRACT_TYPE_REGEXP = /^\s*([^;\s]*)(?:;|\s|$)/
 const TEXT_TYPE_REGEXP = /^text\//i
 
-const mimeTypes: Partial<Record<Extension, MimeType>> = {}
-const mimeExtensions: Partial<Record<MimeType, readonly Extension[]>> = {}
+interface MimeMaps {
+  readonly types: Partial<Record<Extension, MimeType>>
+  readonly extensions: Partial<Record<MimeType, readonly Extension[]>>
+}
 
 const isMimeType = (key: string): key is MimeType => key in db
 
 const isExtension = (key: string): key is Extension => key.length > 0
 
-const populateMaps = (
-  extensionsMap: Partial<Record<MimeType, readonly Extension[]>>,
-  typesMap: Partial<Record<Extension, MimeType>>,
-  database: typeof db,
-): void => {
+const mapsOf = (database: typeof db): MimeMaps => {
+  const typesMap: Partial<Record<Extension, MimeType>> = {}
+  const extensionsMap: Partial<Record<MimeType, readonly Extension[]>> = {}
   const preference: (Source | undefined)[] = ['nginx', 'apache', undefined, 'iana']
 
   for (const key of Object.keys(database)) {
@@ -57,9 +57,11 @@ const populateMaps = (
       typesMap[extension] = type
     }
   }
+
+  return { types: typesMap, extensions: extensionsMap }
 }
 
-populateMaps(mimeExtensions, mimeTypes, db)
+const { types: mimeTypes, extensions: mimeExtensions } = mapsOf(db)
 
 export const lookup = (path: unknown): MimeType | false => {
   if (!path || typeof path !== 'string') {
